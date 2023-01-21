@@ -139,7 +139,8 @@ void create_file() {
 }
 
 void insert() {
-    int slash_check = 0, slash_counter = 0, counter = 0, quoflag = 0, line, start, enter_counter = 0, char_num = 0, flag = 0, path_len;
+    int slash_check = 0, slash_counter = 0, counter = 0, enter_counter = 0, char_num = 0; /*counters*/
+    int quoflag = 0, line, start, flag = 0, path_len, entry_len;
     char c;
     char path[100], current_dr[100], file_check[20], file_name[100], str[20], pos[20], string[100], root_check[10];
     char *file_content = (char *) malloc(1000000 * sizeof(char));
@@ -187,16 +188,38 @@ void insert() {
     printf("file name is :%s\n", file_name);
     printf("path is :%s\n", path);
     int chdr = !chdir(path);
-    if (!chdr) {
-        printf("write a correct address -_-\n");
-        return;
-    }
+    // if (!chdr) {
+    //     printf("write a correct address -_-\n");
+    //     return;
+    // }
     scanf("%s", str);
     if (strcmp(str, "--str") != 0) {
         printf("type '--str' pls\n");
         return;
     }
     scanf("%s", string);
+    entry_len = strlen(string);
+    // for (int i = 0; i < entry_len; i++) {
+    //     if (string[i] == 92) back
+    // }
+    for (int i = 0; i < entry_len - 1; i++) {
+        if (string[i] == 92) {
+            if ((string[i + 1] == 'n') && (string[i - 1] != 92)) {
+                string[i] = 10;
+                for (int j = i + 1; j < entry_len - 1; j++) {
+                    string[j] = string[j + 1];
+                }
+            }
+            if ((string[i + 1] == 'n') && (string[i - 1] == 92)) {
+                // printf("%c\n", string[i]);
+                for (int j = i; j < entry_len - 1; j++) {
+                    string[j] = string[j + 1];
+                }
+                string[entry_len - 1] = '\0';
+            }
+        }
+    }
+    printf("the entry string is :%s\n", string);
     scanf("%s", pos);
     if (strcmp(pos, "--pos") != 0) {
         printf("type '--pos' pls\n");
@@ -207,11 +230,12 @@ void insert() {
     c = getchar();
     if (c != ':') {
         printf("you forgot to type ':'\n");
+        return;
     }
     scanf("%d", &start);
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
-        printf("this file doesn' exist\n");
+        printf("this file doesn't exist\n");
         return;
     }
     while (true) {
