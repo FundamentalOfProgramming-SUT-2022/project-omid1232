@@ -26,6 +26,7 @@ to do list:
     now what \_o_/
 */
 
+int break_get_dr = 0;
 // void insert();
 // void cat();
 // void remove();
@@ -41,85 +42,99 @@ to do list:
 // void directory_tree();
 // void arman();
 void get_directory(char *dr);
-void create_file(char *address, char *name);
+void create_file();
 void check_directory(char *dr);
 bool _exists(char *address);
 
 int main() {
     char c;
     int counter = 0, string_len;
-    char input[20], file[10], address[200], dr[100], dr_temp[100], file_name[100];
+    char input[20], address[200], dr[100], dr_temp[100], file_name[100];
     while (1) {
+        // get_directory(address);
+        // printf("%s", address);
         scanf("%s", input);
-        if (strcmp(input, "createfile") == 0) {
-            scanf("%s", file);
-            getchar();
-            scanf("%c", &c);
-            if (c == '"') {
-                scanf("%c", &c);
-            }
-            get_directory(dr);
-            // printf("%s\n", dr);
-            if (strcmp(dr, "root") != 0) {
-                printf("don't give wrong address you fool!");
-                break;
-            }
-            while (true) {
-                string_len = strlen(dr_temp);
-                for (int i = 0; i < string_len; i++) {
-                    if (dr_temp[i] == '.') {
-                        for (int i = 0; i < string_len; i++) {
-                            file_name[i] = dr_temp[i];
-                        }
-                        break;
-                    }
-                }
-                get_directory(dr_temp);
-            }
-            while (dr_temp)
-            create_file(dr, "sdf");
-        }
+        if (strcmp(input, "exit") == 0) return 0;
+        if (strcmp(input, "createfile") == 0) create_file();
     }
+    return 0;
 }
-
-bool _exists(char* address) {
-  struct stat st = { 0 };
-  return stat(address, &st) != -1;
-}
-
-// void create_folder(char *address, char *name) {
-//     mkdir()
-// }
 
 void check_directory(char *dr) {
     char main_dr[] = {"./"};
     strcat(main_dr, dr);
-    if (!chdir(main_dr)) {
+    if (chdir(main_dr)) {
         mkdir(main_dr);
     }
+    printf("i'm in check directory!\n");
     return;
 }
 
 void get_directory(char *dr) {
-    char c;
     int counter = 0;
     while (true) {
-        scanf("%c", &c);
-        if ((c == '/') || (c == '\n')) break;
-        dr[counter] = c;
+        dr[counter] = getchar();
+        if ((dr[counter] == '/') || (dr[counter] == '\n') || (dr[counter] == '"')) {
+            if (dr[counter] == '\n' || dr[counter] == '"') break_get_dr++;
+            dr[counter] = '\0';
+            break;
+        }
         counter++;
     }
     return;
 }
-void create_file(char *address, char *name) {
-    char main_dr[] = {"./"};
-    strcat(main_dr, address);
-    chdir(main_dr);
-    FILE *file;
-    file = fopen(name, "r");
-    if (file != NULL) {
-        printf("this file already exists!");
+
+void create_file() {
+    int flag = 0;
+    char file[20], dr[100], dr_temp[100], pfile_name[100], file_name[100], path[100];
+    char c;
+    int len, quoflag = 0, len_dr;
+    scanf("%s", file);
+    if (strcmp(file, "--file") != 0) {
+        printf("spell '--file' right dammit!\n");
         return;
     }
-    file = fopen(name, "w");
+    scanf("%c", &c);
+    scanf("%c", &c);
+    if (c == '"') {
+        scanf("%c", &c);
+        quoflag = 1;
+    }
+    get_directory(dr_temp);
+    if (strcmp(dr_temp, "root") != 0) {
+        printf("you should start from root\n");
+        return;
+    }
+    while (true) {
+        if (flag == 1) printf("hey second time\n");
+        get_directory(dr_temp);
+        len = strlen(dr_temp);
+        printf("%s1\n", dr_temp);
+        len_dr = strlen(dr);
+        dr[len_dr] = '/';
+        if (break_get_dr) {
+            break;
+        }
+        strcat(dr, dr_temp);
+        char main_dr[] = {"."};
+        strcat(main_dr, dr);
+        printf("main dr is :%s\n", main_dr);
+        if (chdir(main_dr)) {
+            mkdir(main_dr);
+        }
+        flag = 1;
+    }
+    break_get_dr = 0;
+    printf("%s\n", dr);
+    printf("%s\n", dr_temp);
+    chdir(dr);
+    FILE *open_file;
+    open_file = fopen(dr_temp, "r");
+    if (open_file != NULL) {
+        printf("this file already exists!\n");
+        return;
+    }
+    else printf("this file doesn't exist\n");
+    open_file = fopen(dr_temp, "w");
+    return;
 }
