@@ -8,8 +8,8 @@
 
 /*
 to do list:
-    create file
-    insert
+    create file     this is not goot
+    insert          this almost works
     cat
     remove
     copy
@@ -139,10 +139,10 @@ void create_file() {
 }
 
 void insert() {
-    int slash_check = 0, slash_counter = 0, counter = 0, enter_counter = 0, char_num = 0; /*counters*/
-    int quoflag = 0, line, start, flag = 0, path_len, entry_len;
+    int slash_check = 0, slash_counter = 0, counter = 0, enter_counter = 0, char_num = 0, path_index = 0, space_reduc = 0, string_index = 0; /*counters*/
+    int quoflag = 0, line, start, flag = 0, path_len, entry_len, flag2 = 0;
     char c;
-    char path[100], current_dr[100], file_check[20], file_name[100], str[20], pos[20], string[100], root_check[10];
+    char path[100], current_dr[100], file_check[20], file_name[100], str[20], pos[20], string[100], root_check[4], string_temp[100];
     char *file_content = (char *) malloc(1000000 * sizeof(char));
     scanf("%s", file_check);
     if (strcmp(file_check, "--file") != 0) {
@@ -153,8 +153,39 @@ void insert() {
     if (c == '"') {
         quoflag = 1;
         scanf("%c", &c);
+        while (c != '"') {
+            path[path_index] = c;
+            path_index++;
+            scanf("%c", &c);
+        }
+        path_len = strlen(path);
+        for (int i = 0; i < path_len; i++) {
+            if (path[i] == '/') {
+                while ((path[i + 1] == ' ') || (path[i - 1] == ' ')) {
+                    if (path[i + 1] == ' ') {
+                        for (int j = i + 1; j < path_len - 1; j++) {
+                            path[j] = path[j + 1];
+                        }
+                    }
+                    if (path[i - 1] == ' ') {
+                        for (int j = i - 1; j < path_len - 1; j++) {
+                            path[j] = path[j - 1];
+                        }
+                        i--;
+                    }
+                    space_reduc++;
+                }
+            }
+        }
+        for (int j = path_len - space_reduc; j < path_len; j++) {
+            path[j] = '\0';
+        }
+        for (int j = 0; j < path_len - 1; j++) {
+            path[j] = path[j + 1];
+        }
     }
-    scanf("%s", path);
+    else scanf("%s", path);
+    printf("path is: %s\n", path);
     for (int i = 0; i < strlen(path); i++) {
         if (path[i] == '/') slash_counter++;
     }
@@ -163,6 +194,7 @@ void insert() {
         if (slash_check == slash_counter) {
             for (int j = i + 1; j < strlen(path); j++) {
                 file_name[j - i - 1] = path[j];
+                file_name[strlen(path) - i - 1] = '\0';
             }
             for (int j = i + 1; j < strlen(path); j++) {
                 path[j] = '\0';
@@ -170,13 +202,16 @@ void insert() {
             break;
         }
     }
-    for (int i = 0; i < 4; i++) {
-        root_check[i] = path[i];
-    }
-    if (strcmp(root_check, "root") != 0) {
-        printf("you should start from root\n");
-        return;
-    }
+    // printf("path is: %s\n", path);
+    // for (int i = 0; i < 4; i++) {
+    //     root_check[i] = path[i];
+    // }
+    // printf("%d\n", strlen(root_check));
+    // printf("root check: %s\n", root_check);
+    // if (strcmp(root_check, "root") != 0) {             this was root check
+    //     printf("you should start from root\n");
+    //     return;
+    // }
     path_len = strlen(path);
     path[0] = '.';
     for (int i = 0; i < path_len - 4; i++) {
@@ -188,21 +223,42 @@ void insert() {
     printf("file name is :%s\n", file_name);
     printf("path is :%s\n", path);
     int chdr = !chdir(path);
-    // if (!chdr) {
-    //     printf("write a correct address -_-\n");
-    //     return;
-    // }
+    if (!chdr) {
+        printf("write a correct address -_-\n");
+        return;
+    }
     scanf("%s", str);
     if (strcmp(str, "--str") != 0) {
         printf("type '--str' pls\n");
         return;
     }
-    scanf("%s", string);
+    getchar();
+    scanf("%c", &c);
+    if (c == '"') {                          /*scanning string*/
+        scanf("%c", &c);
+        while (c != '"') {
+            string[string_index] = c;
+            string_index++;
+            scanf("%c", &c);
+        }
+    }
+    else {
+        scanf("%s", string);
+        entry_len = strlen(string);
+        for (int i = 0; i < entry_len; i++) {
+            string_temp[i] = string[i];
+        }
+        for (int i = 0; i < entry_len; i++) {
+            string[i + 1] = string_temp[i];
+        }
+        string[0] = c;
+    }
+    printf("string is: %s\n", string);
     entry_len = strlen(string);
     // for (int i = 0; i < entry_len; i++) {
     //     if (string[i] == 92) back
     // }
-    for (int i = 0; i < entry_len - 1; i++) {
+    for (int i = 0; i < entry_len - 1; i++) {                /*checking \n and \\n */
         if (string[i] == 92) {
             if ((string[i + 1] == 'n') && (string[i - 1] != 92)) {
                 string[i] = 10;
@@ -238,15 +294,41 @@ void insert() {
         printf("this file doesn't exist\n");
         return;
     }
-    while (true) {
-        c = fgetc(file);
-        if (c == '\n') enter_counter++;
-        if (c == EOF) break;
-        file_content[char_num] = c;
-        char_num++;
-        if ((enter_counter == line - 1) && (flag == 0)) {
+    while (true) {                    /*inserting string to file*/
+        if ((line == 1) && (flag2 == 0)) {            /*if pos line 1*/
             for (int i = 0; i < start; i++) {
                 c = fgetc(file);
+                if (c == '\n') {
+                    printf("there are not enough characters in this line\n");
+                    return;
+                }
+                file_content[char_num] = c;
+                char_num++;
+            }
+            for (int i = 0; i < strlen(string); i++) {
+                file_content[char_num] = string[i];
+                char_num++;
+            }
+            flag2 = 1;
+        }
+            c = fgetc(file);
+        if (c == '\n') enter_counter++;
+        if (c == EOF) {
+            if (enter_counter < line - 1) {
+                printf("there are not enough lines\n");
+                return;
+            }
+            break;
+        }
+        file_content[char_num] = c;
+        char_num++;
+        if ((enter_counter == line - 1) && (flag == 0) && (line != 1)) {
+            for (int i = 0; i < start; i++) {
+                c = fgetc(file);
+                if (c == '\n') {
+                    printf("there are not enough characters in this line\n");
+                    return;
+                }
                 file_content[char_num] = c;
                 char_num++;
             }
