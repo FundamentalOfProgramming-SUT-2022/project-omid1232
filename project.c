@@ -9,8 +9,8 @@
 /*
 to do list:
     create file     this is not goot
-    insert          this almost works
-    cat
+    insert          this works but not for " in string
+    cat             I did it mama!
     remove
     copy
     cut
@@ -28,7 +28,7 @@ to do list:
 
 int break_get_dr = 0;
 void insert();
-// void cat();
+void cat();
 // void remove();
 // void copy();
 // void cut();
@@ -54,7 +54,8 @@ int main() {
         scanf("%s", input);
         if (strcmp(input, "exit") == 0) return 0;
         if (strcmp(input, "createfile") == 0) create_file();
-        if( strcmp(input, "insertstr") == 0) insert();
+        if (strcmp(input, "insertstr") == 0) insert();
+        if (strcmp(input, "cat") == 0) cat();
     }
     return 0;
 }
@@ -344,5 +345,78 @@ void insert() {
     fprintf(write_file, "%s", file_content);
     break_get_dr = 0;
     chdir("..");
+    return;
+}
+
+
+void cat() {
+    int quoflag = 0;       /*flag*/
+    int dir_index = 0, file_name_len = 0, path_len;
+    char c;
+    char file_check[10], root_check[10], dir[100], real_path[100], file_name[100];
+    scanf("%s", file_check);
+    if (strcmp(file_check, "--file") != 0) {
+        printf("type --file correct pls\n");
+        return;
+    }
+    getchar();
+    scanf("%c", &c);
+    if (c == '"') {
+        quoflag = 1;
+        scanf("%c", &c);
+        scanf("%c", &c);
+        while (c != '"') {
+            dir[dir_index] = c;
+            dir_index++;
+            scanf("%c", &c);
+        }
+    }
+    else scanf("%s", dir);
+    printf("dir is %s\n", dir);
+    if (quoflag) {
+        dir[dir_index] = '\0';
+        dir[dir_index + 1] = '\0';
+        dir[dir_index + 2] = '\0';
+    }
+    printf("dir is %s\n", dir);
+    for (int i = 0; i < 4; i++) {
+        root_check[i] = dir[i];
+    }
+    printf("root check:%s\n", root_check);
+    // if (strcmp(root_check, "root") != 0) {
+    //     printf("%d\n", strcmp(root_check, "root"));
+    //     printf("%sroot\n", root_check);
+    //     printf("start the directory from root!\n");
+    //     return;
+    // }
+    real_path[0] = '.';
+    for (int i = 0; i < strlen(dir) - 4; i++) {
+        real_path[i + 1] = dir[i + 4];
+    }
+    path_len = strlen(real_path) - 1;
+    for (int i = path_len, j = 0; real_path[i] != '/'; i--, j++) {
+        file_name_len++;
+        file_name[j] = real_path[i];
+        real_path[i] = '\0';
+    }
+    strrev(file_name);
+    file_name[file_name_len] = '\0';
+    printf("file name is: %s\n", file_name);
+    printf("real path is: %s\n", real_path);
+    real_path[strlen(real_path) - 1] = '\0';
+    chdir(real_path);
+    FILE *file = fopen(file_name, "r");
+    while (true) {
+        c = fgetc(file);
+        if (c == EOF) {
+            // fclose(file_name);
+            printf("\n");
+            return;
+        }
+        printf("%c", c);
+    }
+    fclose(file_name);
+    printf("\n");
+    printf("real path is: %s\n", real_path);
     return;
 }
