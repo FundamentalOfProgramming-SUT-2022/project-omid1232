@@ -14,7 +14,7 @@ to do list:
     insert          this works but not for " in string
     cat             I did it mama!
     remove          there
-    copy
+    copy            hehe haha
     cut
     paste
     find
@@ -49,6 +49,7 @@ void check_directory(char *dr);
 bool _exists(char *address);
 char *dircut(char *dir);
 char *filecut(char *dir);
+int return_dir(char *dir);
 
 
 
@@ -64,6 +65,7 @@ int main() {
         if (strcmp(input, "insertstr") == 0) insert();
         if (strcmp(input, "cat") == 0) cat();
         if (strcmp(input, "removestr") == 0) removestr();
+        if (strcmp(input, "copystr") == 0) copy();
     }
     return 0;
 }
@@ -71,7 +73,7 @@ int main() {
 
 
 
-char *dircut(char *dir) {
+char *dircut(char *dir) {               /*gets directory from address*/
     int len, last_slash;
     char *temp, *direction;
     temp = (char *) malloc(max_path_len * sizeof(char));
@@ -94,7 +96,7 @@ char *dircut(char *dir) {
     return direction;
 }
 
-char *filecut(char *dir) {
+char *filecut(char *dir) {                  /*gets filename from address*/
     int len, last_slash;
     char *temp;
     temp = (char *) malloc(max_path_len * sizeof(char));
@@ -132,6 +134,14 @@ char *read_path() {
     return path;
 }
 
+int return_dir(char *dir) {        /*to see how many .. chdir needed*/
+    int slash_counter = 0;
+    int len = strlen(dir);
+    for (int i = 0; i < len; i++) {
+        if (dir[i] == '/') slash_counter++;
+    }
+    return slash_counter;
+}
 
 void check_directory(char *dr) {
     char main_dr[] = {"./"};
@@ -611,4 +621,113 @@ void removestr() {
     return;
 }
 
-void copy() {}
+void copy() {
+    char check_file[20], check_pos[10], check_size[10], *path, *dir, *file_name, c, way, *content, *cpy;
+    int line, start, num;
+    int flag_line = 0, enter_counter = 0, index_content = 0, index_cpy = 0, line_char = 0;          /*line number error*/
+    content = (char *) calloc(100000, sizeof(char));
+    cpy = (char *) calloc(10000, sizeof(char));
+    path = (char *) calloc(1000, sizeof(char));
+    dir = (char *) calloc(1000, sizeof(char));
+    file_name = (char *) calloc(100, sizeof(char));
+    scanf("%s", check_file);
+    if (strcmp(check_file, "--file") != 0) {
+        printf("type --file\n");
+        return;
+    }
+    path = read_path();
+    dir = dircut(path);
+    int back_dir = return_dir(dir);
+    file_name = filecut(path);
+    scanf("%s", check_pos);
+    if (strcmp(check_pos, "--pos") != 0) {
+        printf("type --pos\n");
+        return;
+    }
+    getchar();
+    scanf("%d", &line);
+    c = getchar();
+    if (c != ':') {
+        printf("put : between line and start\n");
+        return;
+    }
+    scanf("%d", &start);
+    scanf("%s", check_size);
+    if (strcmp(check_size, "-size") != 0) {
+        printf("type -size pls\n");
+        return;
+    }
+    scanf(" %d", &num);
+    scanf(" -%c", &way);
+    int chdr = chdir(dir);
+    if (chdr) {
+        printf("this directory doesn't exsit\n");
+        return;
+    }
+    FILE *file = fopen(file_name, "r");
+    if (file == NULL) {
+        printf("this file doesn't exist!\n");
+        return;
+    }
+    while (true) {
+        if (c == EOF) {
+            if (!flag_line) {
+                printf("line out of range\n");
+                return;
+            }
+            break;
+        }
+        if (c == '\n') enter_counter++;
+        content[index_content] = c;
+        index_content++;
+        if ((enter_counter == line - 1) && (flag_line == 0)) {
+            if (way == 'f') {
+                while (true) {
+                    c = fgetc(file);
+                    content[index_content] = c;
+                    if (line_char + 1 == start) {
+                        for (int j = 0; j < num; j++) {
+                            c = fgetc(file);
+                            cpy[index_cpy] = c;
+                            index_cpy++;
+                        }
+                        break;
+                    }
+                    index_content++;
+                    line_char++;
+                }
+            }
+            if (way == 'b') {
+                while (true) {
+                    c = fgetc(file);
+                    content[index_content] = c;
+                    if (line_char == start) {
+                        c = fgetc(file);
+                        index_content++;
+                        content[index_content] = c;
+                        for (int j = 1; j <= num; j++) {
+                            cpy[num - j] = content[index_content - j];
+                            // printf("%c", cpy[num - j]);
+                            index_cpy++;
+                        }
+                        printf("\n");
+                        break;
+                    }
+                    index_content++;
+                    line_char++;
+                }
+            }
+            flag_line = 1;
+        }
+        c = fgetc(file);
+    }
+    fclose(file);
+    printf("copied text is %s\n", cpy);
+    for (int i = 0; i < back_dir; i++) {
+        chdir("..");
+    }
+    file = fopen("./cpy.txt", "w");
+    fprintf(file, "%s", cpy);
+    fclose(file);
+    return;
+}
