@@ -5,13 +5,15 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#define max_str_len 100000
+#define max_path_len 1000
 
 /*
 to do list:
     create file     this is not goot
     insert          this works but not for " in string
     cat             I did it mama!
-    remove
+    remove          there
     copy
     cut
     paste
@@ -29,8 +31,8 @@ to do list:
 int break_get_dr = 0;
 void insert();
 void cat();
-// void remove();
-// void copy();
+void removestr();
+void copy();
 // void cut();
 // void paste();
 // void find();
@@ -45,20 +47,91 @@ void get_directory(char *dr);
 void create_file();
 void check_directory(char *dr);
 bool _exists(char *address);
+char *dircut(char *dir);
+char *filecut(char *dir);
+
+
+
+
+
 
 int main() {
-    char c;
-    int counter = 0, string_len;
-    char input[20], address[200], dr[100], dr_temp[100], file_name[100];
+    char input[100];
     while (1) {
         scanf("%s", input);
         if (strcmp(input, "exit") == 0) return 0;
         if (strcmp(input, "createfile") == 0) create_file();
         if (strcmp(input, "insertstr") == 0) insert();
         if (strcmp(input, "cat") == 0) cat();
+        if (strcmp(input, "removestr") == 0) removestr();
     }
     return 0;
 }
+
+
+
+
+char *dircut(char *dir) {
+    int len, last_slash;
+    char *temp, *direction;
+    temp = (char *) malloc(max_path_len * sizeof(char));
+    direction = (char *) malloc(max_path_len * sizeof(char));
+    strcpy(temp, dir);
+    len = strlen(dir);
+    for (int i = 0; i < len; i++) {
+        if (dir[i] == '/') last_slash = i;
+    }
+    for (int i = last_slash; i < len; i++) {
+        temp[i] = '\0';
+    }
+    direction[0] = '.';
+    direction[1] = '/';
+    len = strlen(temp);
+    for (int i = 0; i < len; i++) {
+        direction[i + 2] = temp[i];
+    }
+    direction[len + 2] = '\0';
+    return direction;
+}
+
+char *filecut(char *dir) {
+    int len, last_slash;
+    char *temp;
+    temp = (char *) malloc(max_path_len * sizeof(char));
+    len = strlen(dir);
+    for (int i = 0; i < len; i++) {
+        if (dir[i] == '/') last_slash = i;
+    }
+    for (int i = last_slash + 1, j = 0; i < len; i++, j++) {
+        temp[j] = dir[i];
+    }
+    return temp;
+}
+
+char *read_path() {
+    int path_counter = 0, temp_counter = 0;
+    char *path;
+    path = (char *) malloc(max_path_len * sizeof(char));
+    char temp[max_path_len];
+    char c;
+    scanf(" %c", &c);
+    if (c == '"') {
+        scanf("%c", &c);
+        scanf("%c", &c);
+        path[path_counter] = c;
+        while (path[path_counter] != '"') {
+            path_counter++;
+            scanf("%c", path + path_counter);
+        }
+        path[path_counter] = '\0';
+        path[path_counter + 1] = '\0';
+    }
+    else {
+        scanf("%s", path);
+    }
+    return path;
+}
+
 
 void check_directory(char *dr) {
     char main_dr[] = {"./"};
@@ -86,7 +159,7 @@ void get_directory(char *dr) {
 
 void create_file() {
     int flag = 0;
-    char file[20], dr[100], dr_temp[100], pfile_name[100], file_name[100], path[100];
+    char file[max_str_len], dr[max_path_len], dr_temp[max_path_len], pfile_name[100], file_name[100], path[max_path_len];
     char c;
     int len, quoflag = 0, len_dr;
     scanf("%s", file);
@@ -143,7 +216,7 @@ void insert() {
     int slash_check = 0, slash_counter = 0, counter = 0, enter_counter = 0, char_num = 0, path_index = 0, space_reduc = 0, string_index = 0; /*counters*/
     int quoflag = 0, line, start, flag = 0, path_len, entry_len, flag2 = 0;
     char c;
-    char path[100], current_dr[100], file_check[20], file_name[100], str[20], pos[20], string[100], root_check[4], string_temp[100];
+    char path[max_str_len], current_dr[max_path_len], file_check[20], file_name[100], str[max_str_len], pos[20], string[max_str_len], root_check[4], string_temp[max_str_len];
     char *file_content = (char *) malloc(1000000 * sizeof(char));
     scanf("%s", file_check);
     if (strcmp(file_check, "--file") != 0) {
@@ -415,8 +488,127 @@ void cat() {
         }
         printf("%c", c);
     }
-    fclose(file_name);
+    fclose(file);
     printf("\n");
     printf("real path is: %s\n", real_path);
     return;
 }
+
+
+void removestr() {
+    int line, start, size, line_counter = 0, index_file = 0, line_char = 0, flag_line = 0;
+    char c, way;
+    char filecheck[20], root[10], pos[10], check_size[10];
+    char *path, *dir, *file_name, *content;
+    path = (char *) malloc(max_path_len * sizeof(char));
+    dir = (char *) malloc(max_path_len * sizeof(char));
+    file_name = (char *) malloc(100 * sizeof(char));
+    content = (char *) malloc(max_str_len * sizeof(char));
+    scanf("%s", filecheck);
+    if (strcmp(filecheck, "--file") != 0) {
+        printf("printf --file !\n");
+        return;
+    }
+    path = read_path();
+    dir = dircut(path);
+    printf("dir is: %s\n", dir);
+    file_name = filecut(path);
+    printf("file name is: %s\n", file_name);
+    for (int i = 0; i < 4; i++) {
+        root[i] = path[i];
+    }
+    if (strcmp(root, "root") != 0) {
+        printf("you should start from root!\n");
+        return;
+    }
+    int chdr = chdir(dir);
+    if (chdr) {
+        printf("this directory doesn't exsit\n");
+        return;
+    }
+    FILE *file = fopen(file_name, "r");
+    if (file == NULL) {
+        printf("this file doesn't exist!\n");
+        return;
+    }
+    fclose(file);
+    scanf("%s", pos);
+    if (strcmp(pos, "-pos") != 0) {
+        printf("type -pos correct\n");
+        return;
+    }
+    scanf(" %d", &line);
+    scanf("%c", &c);
+    if (c != ':') {
+        printf("type :\n");
+        return;
+    }
+    scanf("%d", &start);
+    scanf("%s", check_size);
+    if (strcmp(check_size, "-size") != 0) {
+        printf("type -size here\n");
+        return;
+    }
+    scanf("%d", &size);
+    getchar();
+    getchar();
+    way = getchar();
+    file = fopen(file_name, "r");
+    while (true) {
+        c = fgetc(file);
+        if (c == EOF) {
+            if (flag_line == 0) {
+                printf("line out of range!\n");
+                return;
+            }
+            break;
+        }
+        if (c == '\n') {
+            line_counter++;
+        }
+        content[index_file] = c;
+        index_file++;
+        if ((line_counter == line - 1) && (flag_line == 0)) {
+            if (way == 'f') {
+                while (true) {
+                    c = fgetc(file);
+                    content[index_file] = c;
+                    if (line_char + 1 == start) {
+                        for (int j = 0; j < size - 1; j++) {
+                            fgetc(file);
+                        }
+                        break;
+                    }
+                    index_file++;
+                    line_char++;
+                }
+            }
+            if (way == 'b') {
+                while (true) {
+                    c = fgetc(file);
+                    content[index_file] = c;
+                    if (line_char == start) {
+                        // index_file--;
+                        // index_file--;
+                        for (int j = 0; j < size; j++) {
+                            content[index_file] = '\0';
+                            index_file--;
+                        }
+                        break;
+                    }
+                    index_file++;
+                    line_char++;
+                }
+            }
+            flag_line = 1;
+        }
+    }
+    fclose(file);
+    file = fopen(file_name, "w");
+    fprintf(file, "%s", content);
+    fclose(file);
+    printf("%s\n", content);
+    return;
+}
+
+void copy() {}
