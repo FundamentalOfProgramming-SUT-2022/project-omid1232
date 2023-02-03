@@ -37,7 +37,7 @@ void copy();
 void cut();
 void paste();
 void find();
-// void replace();
+void replace();
 // void grep();
 // void undo();
 // void closing_pairs();
@@ -49,8 +49,10 @@ void get_directory(char *dr);
 void create_file();
 void check_directory(char *dr);
 bool _exists(char *address);
+char *read_path();
 char *dircut(char *dir);
 char *filecut(char *dir);
+char *read_find_string();     /*read entry string*/
 int return_dir(char *dir);
 void return_to_base(int back_dir);
 
@@ -72,6 +74,7 @@ int main() {
         if (strcmp(input, "cutstr") == 0) cut();
         if (strcmp(input, "pastestr") == 0) paste();
         if (strcmp(input, "find") == 0) find();
+        if (strcmp(input, "replace") == 0) replace();
     }
     return 0;
 }
@@ -117,10 +120,9 @@ char *filecut(char *dir) {                  /*gets filename from address*/
 }
 
 char *read_path() {                 /*generally read*/
-    int path_counter = 0, temp_counter = 0;
+    int path_counter = 0;
     char *path;
     path = (char *) calloc(max_path_len, sizeof(char));
-    char temp[max_path_len];
     char c;
     scanf(" %c", &c);
     if (c == '"') {
@@ -178,6 +180,60 @@ void return_to_base(int back_dir) {
         chdir("..");
     }
     return;
+}
+
+char *read_find_string() {
+    int index = 0, flag = 0;
+    char *string, c;
+    string = (char *) calloc(10000, sizeof(char));
+    c = getchar();
+    c = getchar();
+    if (c == '"') {
+        while (true) {
+            c = getchar();
+            if (c == '"') {
+                if (string[index - 1] == 92) {
+                    index--;
+                    string[index] = c;
+                }
+                else {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag) break;
+            if (c == '*') {
+                if (string[index - 1] == 92) {
+                    index--;
+                    string[index] = c;
+                }
+            }
+            string[index] = c;
+            index++;
+        }
+    }
+    else {
+        while (true) {
+            if (c == '"') {
+                if (string[index - 1] == 92) {
+                    index--;
+                    string[index] = c;
+                }
+            }
+            if (c == ' ') break;
+            if (flag) break;
+            if (c == '*') {
+                if (string[index - 1] == 92) {
+                    index--;
+                    string[index] = c;
+                }
+            }
+            string[index] = c;
+            index++;
+            c = getchar();
+        }
+    }
+    return string;
 }
 
 void create_file() {
@@ -857,15 +913,16 @@ void paste() {
 }
 
 void find() {
-    char trash[30], *path, *dir, *file_name, *str, *content, c;
-    int index_content = 0, len_str, flag = 0, i, j, index = -1;
+    char trash[30], *path, *dir, *file_name, *str, *content, c, *style;
+    int index_content = 0, len_str, flag = 0, i, j, index = -1, words = 1, count = 0, times = 0;
     scanf("%s", trash);
+    style = (char *) calloc(100, sizeof(char));
     path = (char *) calloc(1000, sizeof(char));
     dir = (char *) calloc(1000, sizeof(char));
     file_name = (char *) calloc(1000, sizeof(char));
     str = (char *) calloc(max_str_len, sizeof(char));
     content = (char *) calloc(max_file_len, sizeof(char));
-    str = read_path();
+    str = read_find_string();
     scanf("%s", trash);
     path = read_path();
     dir = dircut(path);
@@ -879,8 +936,10 @@ void find() {
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
         printf("this file doesn't exist\n");
+        return_to_base(back_dir);
         return;
     }
+    scanf("%[^\n]%*c", style);
     while (true) {
         c = fgetc(file);
         if (c == EOF) {
@@ -891,22 +950,157 @@ void find() {
     }
     fclose(file);
     len_str = strlen(str);
-    for (i = 0; i < index_content - len_str; i++) {
-        for (j = 0; j < len_str; j++) {
-            if (*(content + i + j) != *(str + j)) {
-                flag = 1;
+    if (strcmp(style, " -count") == 0) {
+        for (i = 0; i <= index_content - len_str; i++) {
+            for (j = 0; j < len_str; j++) {
+                if (*(content + i + j) != *(str + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                count++;
+            }
+            flag = 0;
+        }
+        printf("%d\n", count);
+    }
+    else if (strcmp(style, " -byword") == 0) {
+        for (i = 0; i < index_content - len_str; i++) {
+            if ((*(content + i) == ' ') && (*(content + i - 1) != ' ')) words++;
+            for (j = 0; j < len_str; j++) {
+                if (*(content + i + j) != *(str + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
                 break;
             }
+            flag = 0;
         }
-        if (flag == -1) {
-            index = i;
-            break;
-        }
-        flag = -1;
+        if (flag == 0) printf("%d\n", words);
+        else printf("-1\n");
     }
-    if (index == -1) printf("the given string doesn't exist\n");
-    else printf("%d\n", index);
+    else if (strcmp(style, " -all") == 0) {
+        for (i = 0; i <= index_content - len_str; i++) {
+            for (j = 0; j < len_str; j++) {
+                if (*(content + i + j) != *(str + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                printf("%d ", i);
+            }
+            flag = 0;
+        }
+        printf("\n");
+    }
+    else if (strncmp(style, " -at", 4) == 0) {
+        style += 4;
+        int size = atoi(style);
+        for (i = 0; i < index_content - len_str; i++) {
+            if ((*(content + i) == ' ') && (*(content + i - 1) != ' ')) words++;
+            for (j = 0; j < len_str; j++) {
+                if (*(content + i + j) != *(str + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                times++;
+                if (times == size) {
+                    printf("%d\n", i);
+                    break;
+                }
+            }
+            flag = 0;
+        }
+    }
+    else {
+        for (i = 0; i <= index_content - len_str; i++) {
+            for (j = 0; j < len_str; j++) {
+                if (*(content + i + j) != *(str + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                printf("%d\n", i);
+                break;
+            }
+            flag = 0;
+        }
+    }
     for (i = 0; i < back_dir; i++) {
+        chdir("..");
+    }
+    return;
+}
+
+void replace() {
+    char trash[20], *str1, *str2, *path, *dir, *file_name, *style, *content;
+    int content_index = 0, len_str1, len_str2, flag = 0, i, j;
+    scanf("%s", trash);
+    str1 = (char *) calloc(max_str_len, sizeof(char));
+    str2 = (char *) calloc(max_str_len, sizeof(char));
+    dir = (char *) calloc(max_path_len, sizeof(char));
+    path = (char *) calloc(max_path_len, sizeof(char));
+    file_name = (char *) calloc(max_path_len, sizeof(char));
+    style = (char *) calloc(30, sizeof(char));
+    str1 = read_find_string();
+    scanf("%s", trash);
+    str2 = read_find_string();
+    scanf("%s", trash);
+    path = read_path();
+    scanf("%[^\n]%*c", style);
+    dir = dircut(path);
+    int back_dir = return_dir(dir);
+    file_name = filecut(path);
+    int chdr = chdir(dir);
+    if (chdr) {
+        printf("this file doesn't exist\n");
+        return;
+    }
+    FILE *file = fopen(file_name, "r");
+    if (file == NULL) {
+        printf("this file doesn't exist\n");
+        return_to_base(back_dir);
+        return;
+    }
+    while (true) {
+        c = fgetc(file);
+        if (c == EOF) break;
+        content[content_index] = c;
+        content_index++;
+    }
+    fclose(file);
+    len_str1 = strlen(str1);
+    len_str2 = strlen(str2);
+    //all feature
+    if (strcmp(style, " -all") == 0) {
+        for (i = 0; *(content + i) != '\0'; i++) {
+            for (j = 0; j < len_str1; j++) {
+                if (*(content + i + j) != *(str1 + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                if (len_str1 > len_str2) {
+                    for (j = i; *(content + j) != '\0'; j++) {
+                        *(content + j) = *(content + j + len_str1 - len_str2);
+                    }
+                }
+                for (j = 0; j < len_str2; j++) {
+                    *(content + i + j) = *(str2 + j);
+                }
+            }
+            flag = 0;
+        }
+    }
+    for (int i = 0; i < back_dir; i++) {
         chdir("..");
     }
     return;
