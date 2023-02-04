@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <dirent.h>
 #include <stdbool.h>
 #define max_file_len 100000
 #define max_str_len 500
@@ -40,9 +41,9 @@ void find();
 void replace();
 void grep();
 // void undo();
-// void closing_pairs();
+void auto_indent();
 void text_comparator();
-// void directory_tree();
+void directory_tree(char *basepath, int currentdepth, int depth);
 // void arman();
     /*extra functions*/
 void get_directory(char *dr);
@@ -55,14 +56,16 @@ char *filecut(char *dir);
 char *read_find_string();     /*read entry string*/
 int return_dir(char *dir);          /*to see how many ..*/
 void return_to_base(int back_dir);
-
+void help();
 
 
 
 
 
 int main() {
+    int depth;
     char input[100];
+    printf("type -help for help!\n");
     while (1) {
         scanf("%s", input);
         if (strcmp(input, "exit") == 0) return 0;
@@ -76,7 +79,14 @@ int main() {
         if (strcmp(input, "find") == 0) find();
         if (strcmp(input, "replace") == 0) replace();
         if (strcmp(input, "grep") == 0) grep();
+        if (strcmp(input, "auto-indent") == 0) auto_indent();
         if (strcmp(input, "compare") == 0) text_comparator();
+        if (strcmp(input, "tree") == 0) {
+            scanf("%d", &depth);
+            if (depth >= -1) directory_tree("./root", 0, depth);
+            else printf("invalid depth\n");
+        }
+        if (strcmp(input, "-help") == 0) help();
     }
     return 0;
 }
@@ -242,6 +252,24 @@ char *read_find_string() {
     return string;
 }
 
+void help() {
+    printf("exit to exit the program\n");
+    printf("createfile --file address to create a file\n");
+    printf("insertstr --file address --str string --pos position to insert string to a file\n");
+    printf("cat --file address to see content of a file\n");
+    printf("removestr --file address --pos position -size size -f or -b\n");
+    printf("copystr --file address --pos position -size size -f or -b\n");
+    printf("cutstr --file address --pos position -size size -f or -b\n");
+    printf("pastestr --file address --pos position\n");
+    printf("find (style) -str string --file address\n");
+    printf("replace -str str1 -str str2 -file address (style)\n");
+    printf("grep (style) -str string -files addresses\n");
+    printf("auto-indent address\n");
+    printf("compare address-of-file1 address-of-file2\n");
+    printf("tree depth\n");
+    return;
+}
+
 void create_file() {
     char trash[100], *path, *dir, *file_name, *address;
     path = (char *) calloc(1000, sizeof(char));
@@ -267,6 +295,7 @@ void create_file() {
     FILE *file = fopen(file_name, "r");
     if (file != NULL) {
         printf("file already exists!\n");
+        return_to_base(back_dir);
         return;
     }
     fclose(file);
@@ -282,7 +311,7 @@ void insert() {
     int quoflag = 0, line, start, flag = 0, entry_len, flag2 = 0;
     char c;
     char *path, *dir, *file_name, current_dr[max_path_len], file_check[20], str[max_str_len], pos[20], string[max_str_len], root_check[4], string_temp[max_str_len];
-    char *file_content = (char *) calloc(1000000, sizeof(char));
+    char *file_content = (char *) calloc(100000, sizeof(char));
     path = (char *) calloc(1000, sizeof(char));
     dir = (char *) calloc(1000, sizeof(char));
     file_name = (char *) calloc(1000, sizeof(char));
@@ -292,17 +321,17 @@ void insert() {
         return;
     }
     path = read_path();
-    printf("path is: %s\n", path);
+    // printf("path is: %s\n", path);
     dir = dircut(path);
     int back_dir = return_dir(dir);
     file_name = filecut(path);
-    printf("file name is :%s\n", file_name);
+    // printf("file name is :%s\n", file_name);
     // printf("dir is :%s\n", dir);
     int chdr = !chdir(dir);
-    if (!chdr) {
-        printf("write a correct address -_-\n");
-        return;
-    }
+    // if (!chdr) {
+    //     printf("write a correct address -_-\n");
+    //     return;
+    // }
     scanf("%s", str);
     // if (strcmp(str, "--str") != 0) {
     //     printf("type '--str' pls\n");
@@ -317,6 +346,7 @@ void insert() {
             string_index++;
             scanf("%c", &c);
         }
+        string[string_index] = '\0';
     }
     else {
         scanf("%s", string);
@@ -329,7 +359,6 @@ void insert() {
         }
         string[0] = c;
     }
-    // printf("string is: %s\n", string);
     for (int i = 0; *(string + i) != '\0'; i++) {                /*checking \n and \\n */
         entry_len = strlen(string);
         if (string[i] == 92) {
@@ -351,6 +380,7 @@ void insert() {
             }
         }
     }
+    printf("string is: %s\n", string);
     // printf("the entry string is :%s\n", string);
     scanf("%s", pos);
     // if (strcmp(pos, "--pos") != 0) {
@@ -443,7 +473,7 @@ void insert() {
 
 
 void cat() {
-    int quoflag = 0;       /*flag*/
+    int quoflag = 0, flag = 0;       /*flag*/
     int dir_index = 0, file_name_len = 0, path_len;
     char c;
     char file_check[10], root_check[10], real_path[100], *file_name, *path, *dir;
@@ -471,9 +501,11 @@ void cat() {
             printf("\n");
             break;
         }
+        flag = 1;
         printf("%c", c);
     }
     fclose(file);
+    if (flag == 0) printf("%s is empty\n", file_name);
     for (int i = 0; i < back_dir; i++) {
         chdir("..");
     }
@@ -744,11 +776,12 @@ void cut() {
     }
     scanf("%d", &start);
     scanf("%s", check_size);
-    if (strcmp(check_size, "-size") != 0) {
-        printf("type -size pls\n");
-        return;
-    }
+    // if (strcmp(check_size, "-size") != 0) {
+    //     printf("type -size pls\n");
+    //     return;
+    // }
     scanf(" %d", &num);
+    printf("good till here\n");
     scanf(" -%c", &way);
     int chdr = chdir(dir);
     if (chdr) {
@@ -757,6 +790,7 @@ void cut() {
     }
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
+        return_to_base(back_dir);
         printf("this file doesn't exist!\n");
         return;
     }
@@ -775,11 +809,12 @@ void cut() {
         content[index_file] = c;
         index_file++;
         if ((line_counter == line - 1) && (flag_line == 0)) {
+            printf("in the if\n");
             if (way == 'f') {
                 while (true) {
                     c = fgetc(file);
                     content[index_file] = c;
-                    if (line_char + 1 == start) {
+                    if (line_char == start) {
                         for (int j = 0; j < num; j++) {
                             c = fgetc(file);
                             if (!flag) {
@@ -817,6 +852,8 @@ void cut() {
             flag_line = 1;
         }
     }
+    printf("still good\n");
+    char dfsklj = getchar();
     fclose(file);
     file = fopen(file_name, "w");
     fprintf(file, "%s", content);
@@ -1336,7 +1373,7 @@ void grep() {
 
 void text_comparator() {
     char *path1, *path2, *dir1, *dir2, *file_name1, *file_name2, *temp1, *temp2, **rest;
-    int line = 0, start, rest_index = 0, flag = 0;
+    int line = 0, start, rest_index = 0, flag = 0, flag1 = 0, flag2 = 0;
     path1 = (char *) calloc(max_path_len, sizeof(char));
     path2 = (char *) calloc(max_path_len, sizeof(char));
     dir1 = (char *) calloc(max_path_len, sizeof(char));
@@ -1381,8 +1418,18 @@ void text_comparator() {
         return;
     }
     return_to_base(back_dir2);
-    while ((fgets(temp1, max_str_len, file1) != NULL) && (fgets(temp2, max_str_len, file2) != NULL)) {
+    while (true) {
+        if (fgets(temp1, max_str_len, file1) == NULL) {
+            flag1 = 1;
+            break;
+        }
+        if (fgets(temp2, max_str_len, file2) == NULL) {
+            flag2 = 1;
+            break;
+        }
         line++;
+        if (temp1[strlen(temp1) - 1] == '\n') temp1[strlen(temp1) - 1] = '\0';
+        if (temp2[strlen(temp2) - 1] == '\n') temp2[strlen(temp2) - 1] = '\0';
         if (strcmp(temp1, temp2) != 0) {
             flag = 1;
             printf("====%d====\n", line);
@@ -1391,7 +1438,24 @@ void text_comparator() {
         }
     }
     start = line;
-    if (fgets(temp1, max_str_len, file1) != NULL) {
+    if (flag1 == 1) {
+        if (fgets(temp2, max_str_len, file2) != NULL) {
+            printf("%s has more lines\n", file_name2);
+            strcpy(*(rest + rest_index), temp2);
+            rest_index++;
+            line++;
+            while (fgets(temp2, max_str_len, file2) != NULL) {
+                strcpy(*(rest + rest_index), temp2);
+                rest_index++;
+                line++;
+            }
+            printf("%d >>>> %d\n", start, line);
+            for (int i = 0; i < rest_index; i++) {
+                printf("%s\n", *(rest + i));
+            }
+        }
+    }
+    else if (flag2 == 1) {
         printf("%s has more lines\n", file_name1);
         strcpy(*(rest + rest_index), temp1);
         rest_index++;
@@ -1408,22 +1472,121 @@ void text_comparator() {
             printf("%s\n", *(rest + i));
         }
     }
-    else if (fgets(temp2, max_str_len, file2) != NULL) {
-        printf("%s has more lines\n", file_name2);
-        while (fgets(temp2, max_str_len, file2) != NULL) {
-            strcpy(*(rest + rest_index), temp2);
-            rest_index++;
-            line++;
-        }
-        printf("%d >>>> %d", start, line);
-        for (int i = 0; i < rest_index; i++) {
-            printf("%s\n", *(rest + i));
-        }
-    }
+    // else if (fgets(temp2, max_str_len, file2) != NULL) {
+    //     printf("%s has more lines\n", file_name2);
+    //     while (fgets(temp2, max_str_len, file2) != NULL) {
+    //         strcpy(*(rest + rest_index), temp2);
+    //         rest_index++;
+    //         line++;
+    //     }
+    //     printf("%d >>>> %d", start, line);
+    //     for (int i = 0; i < rest_index; i++) {
+    //         printf("%s\n", *(rest + i));
+    //     }
+    // }
     if (flag == 0) {
         printf("%s and %s are the same\n", file_name1, file_name2);
     }
     fclose(file1);
     fclose(file2);
+    return;
+}
+
+void directory_tree(char *basepath, int current_depth, int depth) {
+
+    /*big help from https://codeforwin.org/c-programming/c-program-to-list-all-files-in-a-directory-recursively*/
+
+    if (depth == -1) {
+        directory_tree(basepath, current_depth, 1000);
+        return;
+    }
+    if (current_depth > depth) return;
+    char path[1000];
+    struct dirent *dp;
+    DIR *dir = opendir(basepath);
+    if (!dir) return;
+    while ((dp = readdir(dir)) != NULL) {
+        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            printf("|");
+            for (int i = 0; i < current_depth; i++) {
+                printf("--");
+            }
+            printf("%s\n", dp->d_name);
+            strcpy(path, basepath);
+            strcat(path, "/");
+            strcat(path, dp->d_name);
+            directory_tree(path, current_depth + 1, depth);
+        }
+    }
+    closedir(dir);
+    return;
+}
+
+void auto_indent() {
+    char *path, *dir, *file_name, *content, c;
+    int content_index = 0, counter = 0;
+    content = (char *) calloc(max_file_len, sizeof(char));
+    path = (char *) calloc(max_path_len, sizeof(char));
+    dir = (char *) calloc(max_path_len, sizeof(char));
+    file_name = (char *) calloc(max_path_len, sizeof(char));
+    path = read_path();
+    dir = dircut(path);
+    file_name = filecut(path);
+    int chdr = chdir(dir);
+    int back_dir = return_dir(dir);
+    if (chdr) {
+        printf("this file doesn't exist\n");
+        return;
+    }
+    FILE *file = fopen(file_name, "r");
+    if (file == NULL) {
+        printf("this file doesn't exist\n");
+        return_to_base(back_dir);
+        return;
+    }
+    while (true) {
+        c = fgetc(file);
+        if (c == EOF) break;
+        *(content + content_index) = c;
+        content_index++;
+    }
+    fclose(file);
+    fopen(file_name, "w");
+    for (int i = 0; *(content + i) != '\0'; i++) {
+        if (*(content + i) != '{' && *(content + i) != '}' && *(content + i) != ' ' && *(content + i) != '\n') {
+            fputc(*(content + i), file);
+        }
+        if (*(content + i) == '{') {
+            if (*(content + i - 1)) {
+                fputc('{', file);
+                fputc('\n', file);
+                counter++;
+                for (int j = 0; j < counter; j++) {
+                    fputc('\t', file);
+                }
+            }
+        }
+        else if (*(content + i) == '\n') {
+            fputc(*(content + i), file);
+            for (int j = 0; j < counter; j++) {
+                fputc('\n', file);
+            }
+        }
+        else if (*(content + i) == '}') {
+            fputc('\n', file);
+            counter--;
+            for (int j = 0; j < counter; j++) {
+                fprintf(file, "\t");
+            }
+            fprintf(file, "}");
+        }
+        else if (*(content + i) == ' ') {
+            if (*(content + i - 1) != ' ') {
+                fprintf(file, " ");
+            }
+        }
+    }
+    fclose(file);
+    return_to_base(back_dir);
     return;
 }
