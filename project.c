@@ -6,8 +6,8 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #define max_file_len 100000
-#define max_str_len 1000
-#define max_path_len 1000
+#define max_str_len 500
+#define max_path_len 200
 
 /*
 to do list:
@@ -38,10 +38,10 @@ void cut();
 void paste();
 void find();
 void replace();
-// void grep();
+void grep();
 // void undo();
 // void closing_pairs();
-// void text_comparator();
+void text_comparator();
 // void directory_tree();
 // void arman();
     /*extra functions*/
@@ -53,7 +53,7 @@ char *read_path();
 char *dircut(char *dir);
 char *filecut(char *dir);
 char *read_find_string();     /*read entry string*/
-int return_dir(char *dir);
+int return_dir(char *dir);          /*to see how many ..*/
 void return_to_base(int back_dir);
 
 
@@ -75,6 +75,8 @@ int main() {
         if (strcmp(input, "pastestr") == 0) paste();
         if (strcmp(input, "find") == 0) find();
         if (strcmp(input, "replace") == 0) replace();
+        if (strcmp(input, "grep") == 0) grep();
+        if (strcmp(input, "compare") == 0) text_comparator();
     }
     return 0;
 }
@@ -124,7 +126,11 @@ char *read_path() {                 /*generally read*/
     char *path;
     path = (char *) calloc(max_path_len, sizeof(char));
     char c;
-    scanf(" %c", &c);
+    c = getchar();
+    if (c == '\n') {
+        return NULL;
+    }
+    c = getchar();
     if (c == '"') {
         scanf("%c", &c);
         scanf("%c", &c);
@@ -276,7 +282,7 @@ void insert() {
     int quoflag = 0, line, start, flag = 0, entry_len, flag2 = 0;
     char c;
     char *path, *dir, *file_name, current_dr[max_path_len], file_check[20], str[max_str_len], pos[20], string[max_str_len], root_check[4], string_temp[max_str_len];
-    char *file_content = (char *) malloc(1000000 * sizeof(char));
+    char *file_content = (char *) calloc(1000000, sizeof(char));
     path = (char *) calloc(1000, sizeof(char));
     dir = (char *) calloc(1000, sizeof(char));
     file_name = (char *) calloc(1000, sizeof(char));
@@ -324,14 +330,16 @@ void insert() {
         string[0] = c;
     }
     // printf("string is: %s\n", string);
-    entry_len = strlen(string);
-    for (int i = 0; i < entry_len - 1; i++) {                /*checking \n and \\n */
+    for (int i = 0; *(string + i) != '\0'; i++) {                /*checking \n and \\n */
+        entry_len = strlen(string);
         if (string[i] == 92) {
             if ((string[i + 1] == 'n') && (string[i - 1] != 92)) {
                 string[i] = 10;
                 for (int j = i + 1; j < entry_len - 1; j++) {
                     string[j] = string[j + 1];
                 }
+                *(string + entry_len - 1) = '\0';
+                *(string + entry_len) = '\0';
             }
             if ((string[i + 1] == 'n') && (string[i - 1] == 92)) {
                 // printf("%c\n", string[i]);
@@ -339,6 +347,7 @@ void insert() {
                     string[j] = string[j + 1];
                 }
                 string[entry_len - 1] = '\0';
+                string[entry_len] = '\0';
             }
         }
     }
@@ -1184,5 +1193,237 @@ void replace() {
     for (int i = 0; i < back_dir; i++) {
         chdir("..");
     }
+    return;
+}
+
+void grep() {
+    char *trash, *style, *str, **path, **dir, **file_name, *temp;
+    int counter = 0, back_dir, chdr, len_str, flag = 0, lines = 0, flag2 = 0;
+    str = (char *) calloc(max_str_len, sizeof(char));
+    temp = (char *) calloc(max_str_len, sizeof(char));
+    trash = (char *) calloc(30, sizeof(char));
+    style = (char *) calloc(30, sizeof(char));
+    path = (char **) calloc(100, sizeof(char *));
+    file_name = (char **) calloc(100, sizeof(char *));
+    dir = (char **) calloc(100, sizeof(char *));
+    for (int i = 0; i < 100; i++) {
+        *(path + i) = (char *) calloc(max_path_len, sizeof(char));
+        *(dir + i) = (char *) calloc(max_path_len, sizeof(char));
+        *(file_name + i) = (char *) calloc(max_path_len, sizeof(char));
+    }
+    scanf("%s", style);
+    // printf("style is %s\n", style);
+    if ((strcmp(style, "-c") == 0) || (strcmp(style, "-l") == 0)) {
+        scanf("%s", trash);
+    }
+    str = read_find_string();
+    len_str = strlen(str);
+    scanf("%s", trash);
+    // printf("%s\n", trash);
+    while (true) {
+        *(path + counter) = read_path();
+        // printf("entry is %s\n", *(path + counter));
+        if(*(path + counter) == NULL) {
+            // printf("this is enter\n");
+            *(path + counter) = '\0';
+            break;
+        }
+        counter++;
+    }
+    // scanf("%s", trash);
+    FILE *file;
+    for (int i = 0; i < counter; i++) {
+        *(dir + i) = dircut(*(path + i));
+        *(file_name + i) = filecut(*(path + i));
+        back_dir = return_dir(*(dir + i));
+        chdr = chdir(*(dir + i));
+        if (chdr) {
+            printf("this file doesn't exist\n");
+            return;
+        }
+        file = fopen(*(file_name + i), "r");
+        if (file == NULL) {
+            printf("this file doesn't exist\n");
+            return_to_base(back_dir);
+            return;
+        }
+        fclose(file);
+        return_to_base(back_dir);
+    }
+    if (strcmp(style, "-c") == 0) {
+        for (int i = 0; i < counter; i++) {
+            chdir(*(dir + i));
+            file = fopen(*(file_name + i), "r");
+            while (fgets(temp, max_str_len, file) != NULL) {
+                for (int j = 0; *(temp + j) != '\0'; j++) {
+                    for (int k = 0; k < len_str; k++) {
+                        if (*(temp + j + k) != *(str + k)) {
+                            flag = 1;
+                            break;
+                        }
+                    }
+                    if (flag == 0) {
+                        lines++;
+                        break;
+                    }
+                    flag = 0;
+                }
+            }
+            printf("\n");
+            fclose(file);
+            back_dir = return_dir(*(dir + i));
+            return_to_base(back_dir);
+        }
+        printf("%d\n", lines);
+    }
+    else if (strcmp(style, "-l") == 0) {
+        for (int i = 0; i < counter; i++) {
+            chdir(*(dir + i));
+            file = fopen(*(file_name + i), "r");
+            while (fgets(temp, max_str_len, file) != NULL) {
+                for (int j = 0; *(temp + j) != '\0'; j++) {
+                    for (int k = 0; k < len_str; k++) {
+                        if (*(temp + j + k) != *(str + k)) {
+                            flag = 1;
+                            break;
+                        }
+                    }
+                    if (flag == 0) {
+                        printf("%s\n", *(file_name + i));
+                        flag2 = 1;
+                        break;
+                    }
+                    flag = 0;
+                }
+                if (flag2) {
+                    break;
+                }
+                flag2 = 0;
+            }
+            printf("\n");
+            fclose(file);
+            back_dir = return_dir(*(dir + i));
+            return_to_base(back_dir);
+        }
+    }
+    else {
+        for (int i = 0; i < counter; i++) {
+            chdir(*(dir + i));
+            file = fopen(*(file_name + i), "r");
+            while (fgets(temp, max_str_len, file) != NULL) {
+                for (int j = 0; *(temp + j) != '\0'; j++) {
+                    for (int k = 0; k < len_str; k++) {
+                        if (*(temp + j + k) != *(str + k)) {
+                            flag = 1;
+                            break;
+                        }
+                    }
+                    if (flag == 0) {
+                        printf("%s: %s\n", *(file_name + i), temp);
+                        break;
+                    }
+                    flag = 0;
+                }
+            }
+            printf("\n");
+            fclose(file);
+            back_dir = return_dir(*(dir + i));
+            return_to_base(back_dir);
+        }
+    }
+    return;
+}
+
+void text_comparator() {
+    char *path1, *path2, *dir1, *dir2, *file_name1, *file_name2, *temp1, *temp2, **rest;
+    int line = 0, start, rest_index = 0, flag = 0;
+    path1 = (char *) calloc(max_path_len, sizeof(char));
+    path2 = (char *) calloc(max_path_len, sizeof(char));
+    dir1 = (char *) calloc(max_path_len, sizeof(char));
+    dir2 = (char *) calloc(max_path_len, sizeof(char));
+    file_name1 = (char *) calloc(max_path_len, sizeof(char));
+    file_name2 = (char *) calloc(max_path_len, sizeof(char));
+    temp1 = (char *) calloc(max_str_len, sizeof(char));
+    temp2 = (char *) calloc(max_str_len, sizeof(char));
+    rest = (char **) calloc(50, sizeof(char *));
+    for (int i = 0; i < 50; i++) {
+        *(rest + i) = (char *) calloc(max_path_len, sizeof(char));
+    }
+    path1 = read_path();
+    path2 = read_path();
+    dir1 = dircut(path1);
+    dir2 = dircut(path2);
+    file_name1 = filecut(path1);
+    file_name2 = filecut(path2);
+    int back_dir1 = return_dir(dir1);
+    int back_dir2 = return_dir(dir2);
+    int chdr = chdir(dir1);
+    if (chdr) {
+        printf("%s doesn't exist\n", file_name1);
+        return;
+    }
+    FILE *file1 = fopen(file_name1, "r");
+    if (file1 == NULL) {
+        printf("%s doesn't exist\n", file_name1);
+        return_to_base(back_dir1);
+        return;
+    }
+    return_to_base(back_dir1);
+    chdr = chdir(dir2);
+    if (chdr) {
+        printf("%s doesn't exist\n", file_name2);
+        return;
+    }
+    FILE *file2 = fopen(file_name2, "r");
+    if (file2 == NULL) {
+        printf("%s doesn't exist\n", file_name2);
+        return_to_base(back_dir2);
+        return;
+    }
+    return_to_base(back_dir2);
+    while ((fgets(temp1, max_str_len, file1) != NULL) && (fgets(temp2, max_str_len, file2) != NULL)) {
+        line++;
+        if (strcmp(temp1, temp2) != 0) {
+            flag = 1;
+            printf("====%d====\n", line);
+            printf("%s\n%s\n", temp1, temp2);
+            // printf("%d %d\n", strlen(temp1), strlen(temp2));
+        }
+    }
+    start = line;
+    if (fgets(temp1, max_str_len, file1) != NULL) {
+        printf("%s has more lines\n", file_name1);
+        strcpy(*(rest + rest_index), temp1);
+        rest_index++;
+        line++;
+        while (true) {
+            if (fgets(temp1, max_str_len, file1) == NULL) break;
+            strcpy(*(rest + rest_index), temp1);
+            rest_index++;
+            line++;
+        }
+        printf("%d >>>> %d\n", start, line);
+        printf("the rest index is %d\n", rest_index);
+        for (int i = 0; i < rest_index; i++) {
+            printf("%s\n", *(rest + i));
+        }
+    }
+    else if (fgets(temp2, max_str_len, file2) != NULL) {
+        printf("%s has more lines\n", file_name2);
+        while (fgets(temp2, max_str_len, file2) != NULL) {
+            strcpy(*(rest + rest_index), temp2);
+            rest_index++;
+            line++;
+        }
+        printf("%d >>>> %d", start, line);
+        for (int i = 0; i < rest_index; i++) {
+            printf("%s\n", *(rest + i));
+        }
+    }
+    if (flag == 0) {
+        printf("%s and %s are the same\n", file_name1, file_name2);
+    }
+    fclose(file1);
+    fclose(file2);
     return;
 }
