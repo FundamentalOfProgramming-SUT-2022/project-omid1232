@@ -1040,8 +1040,8 @@ void find() {
 }
 
 void replace() {
-    char trash[20], *str1, *str2, *path, *dir, *file_name, *style, *content;
-    int content_index = 0, len_str1, len_str2, flag = 0, i, j;
+    char trash[20], *str1, *str2, *path, *dir, *file_name, *style, *content, *temp, c;
+    int content_index = 0, len_str1, len_str2, flag = 0, i, j, counter = 0, success = 0;
     scanf("%s", trash);
     str1 = (char *) calloc(max_str_len, sizeof(char));
     str2 = (char *) calloc(max_str_len, sizeof(char));
@@ -1049,6 +1049,8 @@ void replace() {
     path = (char *) calloc(max_path_len, sizeof(char));
     file_name = (char *) calloc(max_path_len, sizeof(char));
     style = (char *) calloc(30, sizeof(char));
+    content = (char *) calloc(max_file_len, sizeof(char));
+    temp = (char *) calloc(max_file_len, sizeof(char));
     str1 = read_find_string();
     scanf("%s", trash);
     str2 = read_find_string();
@@ -1088,10 +1090,18 @@ void replace() {
                 }
             }
             if (flag == 0) {
+                success = 1;
                 if (len_str1 > len_str2) {
                     for (j = i; *(content + j) != '\0'; j++) {
                         *(content + j) = *(content + j + len_str1 - len_str2);
                     }
+                    for (j = content_index - len_str1 + len_str2; j < content_index; j++) {
+                        *(content + j) = '\0';
+                    }
+                }
+                else if (len_str1 < len_str2) {
+                    strcpy(temp, content + i);
+                    strcpy(content + i + len_str2 - len_str1, temp);
                 }
                 for (j = 0; j < len_str2; j++) {
                     *(content + i + j) = *(str2 + j);
@@ -1100,6 +1110,77 @@ void replace() {
             flag = 0;
         }
     }
+    // at feature
+    else if (strncmp(style, " -at", 4) == 0) {
+        int size = atoi(style + 4);
+        for (i = 0; *(content + i) != '\0'; i++) {
+            for (j = 0; j < len_str1; j++) {
+                if (*(content + i + j) != *(str1 + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                counter++;
+                if (counter == size) {
+                    success = 1;
+                    if (len_str1 > len_str2) {
+                        for (j = i; *(content + j) != '\0'; j++) {
+                            *(content + j) = *(content + j + len_str1 - len_str2);
+                        }
+                        for (j = content_index - len_str1 + len_str2; j < content_index; j++) {
+                            *(content + j) = '\0';
+                        }
+                    }
+                    else if (len_str1 < len_str2) {
+                        strcpy(temp, content + i);
+                        strcpy(content + i + len_str2 - len_str1, temp);
+                    }
+                    for (j = 0; j < len_str2; j++) {
+                        *(content + i + j) = *(str2 + j);
+                    }
+                    break;
+                }
+            }
+            flag = 0;
+        }
+    }
+    // no feature
+    else {
+        for (i = 0; *(content + i) != '\0'; i++) {
+            for (j = 0; j < len_str1; j++) {
+                if (*(content + i + j) != *(str1 + j)) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                success = 1;
+                if (len_str1 > len_str2) {
+                    for (j = i; *(content + j) != '\0'; j++) {
+                        *(content + j) = *(content + j + len_str1 - len_str2);
+                    }
+                    for (j = content_index - len_str1 + len_str2; j < content_index; j++) {
+                        *(content + j) = '\0';
+                    }
+                }
+                else if (len_str1 < len_str2) {
+                    strcpy(temp, content + i);
+                    strcpy(content + i + len_str2 - len_str1, temp);
+                }
+                for (j = 0; j < len_str2; j++) {
+                    *(content + i + j) = *(str2 + j);
+                }
+                break;
+            }
+            flag = 0;
+        }
+    }
+    if (success) printf("success!\n");
+    else printf("there was no match!\n");
+    file = fopen(file_name, "w");
+    fprintf(file, "%s", content);
+    fclose(file);
     for (int i = 0; i < back_dir; i++) {
         chdir("..");
     }
